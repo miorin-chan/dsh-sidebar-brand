@@ -16,7 +16,7 @@ const SETTINGS_CSS = `
 .dsh-sb-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
   container-type: inline-size;
   color: var(--dsw-alias-label-primary);
@@ -36,43 +36,43 @@ const SETTINGS_CSS = `
   font-weight: 500;
   color: var(--dsw-alias-label-primary);
 }
-.dsh-sb-card {
+.dsh-sb-list {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-lg, 16px);
-  background: var(--dsw-alias-card-fill);
-  overflow: hidden;
 }
 .dsh-sb-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px 12px;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 12px 0;
+}
+.dsh-sb-row:first-child {
+  padding-top: 4px;
+}
+.dsh-sb-row:last-child {
+  padding-bottom: 4px;
 }
 .dsh-sb-row + .dsh-sb-row {
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  border-top: 0.5px solid var(--dsw-alias-border-l1);
 }
 .dsh-sb-icon {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  box-sizing: border-box;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-sm, 8px);
-  background: var(--dsw-alias-bg-layer-2);
+  width: 20px;
+  height: 20px;
+  align-self: flex-start;
+  margin-top: 2px;
   color: var(--dsw-alias-label-secondary);
 }
 .dsh-sb-copy {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 .dsh-sb-title-line {
@@ -102,6 +102,7 @@ const SETTINGS_CSS = `
   display: inline-flex;
   flex: none;
   align-items: center;
+  margin-inline-start: 4px;
 }
 .dsh-sb-upload {
   position: relative;
@@ -168,7 +169,7 @@ const SETTINGS_CSS = `
   height: 36px;
   max-width: 100%;
   padding: 6px 12px;
-  border: 0.5px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l1);
   border-radius: var(--dsw-radius-sm, 8px);
   background: var(--dsw-alias-bg-layer-2);
 }
@@ -184,9 +185,8 @@ const SETTINGS_CSS = `
   --dsw-alias-interactive-bg-hover: color-mix(in srgb, var(--dsw-alias-state-error-primary) 8%, transparent);
 }
 .dsh-sb-error {
-  margin: 0;
-  padding: 10px 16px;
-  border-top: 0.5px solid var(--dsw-alias-border-l2);
+  margin: 4px 0 0;
+  padding: 0;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-state-error-primary);
@@ -198,12 +198,13 @@ const SETTINGS_CSS = `
     align-items: flex-start;
   }
   .dsh-sb-copy {
-    flex: 1 1 calc(100% - 44px);
+    flex: 1 1 calc(100% - 32px);
   }
   .dsh-sb-control {
     width: 100%;
     box-sizing: border-box;
-    padding-inline-start: 44px;
+    margin-inline-start: 0;
+    padding-inline-start: 32px;
   }
   .dsh-sb-preview-group {
     flex: 1 1 100%;
@@ -226,7 +227,7 @@ export function ImageSettings({ preference, t }: { preference: Preference } & Pr
       <div className="dsh-sb-head">
         <h4 className="dsh-sb-heading">{t('sectionTitle')}</h4>
       </div>
-      <div className="dsh-sb-card">
+      <div className="dsh-sb-list">
         <div className="dsh-sb-row">
           <span className="dsh-sb-icon" aria-hidden="true">
             <IconPersonalizationOutlineMedium size={16} />
