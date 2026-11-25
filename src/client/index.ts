@@ -1,6 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type { BundleInfo } from '@deepseek-ai/dsh-plugin-manager/types'
+import type { PluginInfo } from '@deepseek-ai/dsh-plugin-manager/types'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
@@ -133,15 +133,14 @@ export function apply(ctx: Context) {
         presentation = undefined
       }
     }
-    // The live graph can retain an already-loaded client bundle after Host disable.
-    // Follow the supported inventory event so the stock UI is restored in the same page.
+    // A disabled Host row may leave its Client module loaded. Use the live row inventory
+    // so both standalone and Atlas installations follow the same enable state.
     const sync = async () => {
       const current = ++revision
-      const result = await ctx.remote.pluginManager.listBundles()
+      const result = await ctx.remote.pluginManager.listPlugins()
       if (current !== revision || !result.ok) return
-      const bundles: readonly BundleInfo[] = result.value
-      const bundle = bundles.find(item => item.name === BUNDLE)
-      show(bundle?.enabled === true)
+      const rows: readonly PluginInfo[] = result.value
+      show(rows.some(row => row.moduleName === BUNDLE && row.enabled))
     }
     const refresh = () => { void sync().catch(() => {}) }
     const unwatch = ctx.remote.$on('plugin-manager/changed', refresh)

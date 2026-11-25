@@ -17,55 +17,72 @@ const plugin = registration.factory((name) => {
   return React
 })
 
-test('shadows only the brand slots, follows Host enable state, and cleans up on unload', async () => {
-  const disposers: (() => void)[] = []
-  const slots = new Map<string, Record<string, unknown>>()
-  const locales = new Map()
-  let enabled = true
-  let listener: (() => void) | undefined
-  const ctx = {
-    remote: {
-      $on(event, callback) {
-        assert.equal(event, 'plugin-manager/changed')
-        listener = callback
-        return () => { listener = undefined }
-      },
-      pluginManager: { listBundles: async () => ({ ok: true, value: [{
-        name: '@miorin/dsh-sidebar-brand', enabled, rows: [{
-          rowId: 'dsh-sidebar-brand', moduleName: '@miorin/dsh-sidebar-brand', enabled,
-        }],
-      }] }) },
-    },
-    effect: (install) => disposers.push(install()),
-    locale: { register(ns, labels) { locales.set(ns, labels); return () => locales.delete(ns) } },
-    slots: {
-      inject(name, install) { assert.equal(typeof name, 'string'); return install() },
-      register(options) { slots.set(options.name, options); return () => slots.delete(options.name) },
-    },
-  }
-  assert.deepEqual(plugin.inject, ['slots', 'locale', 'remote', 'remote.pluginManager'])
-  plugin.apply(ctx)
-  assert.equal(Object.keys(locales.get('dsh-sidebar-brand')).length, 8)
-  assert.deepEqual([...slots.values()], [
-    { name: 'sidebar.brand.mark', priority: -10 },
-    { name: 'sidebar.brand.name', priority: -10 },
-    { name: 'plugins.bundle.config', key: '@miorin/dsh-sidebar-brand', locale: 'dsh-sidebar-brand' },
-  ])
-  assert.equal(styles.size, 1)
-  enabled = false
-  listener?.()
-  await Promise.resolve()
-  assert.deepEqual([slots.size, styles.size, locales.size], [0, 0, 0])
-  enabled = true
-  listener?.()
-  await Promise.resolve()
-  assert.deepEqual([slots.size, styles.size, locales.size], [3, 1, 1])
-  listener?.()
-  for (const dispose of disposers.reverse()) dispose()
-  await Promise.resolve()
-  assert.deepEqual([slots.size, styles.size, locales.size], [0, 0, 0])
-  assert.equal(listener, undefined)
+const BRAND = '@miorin/dsh-sidebar-brand'
+const ATLAS = '@miorin/dsh-atlas-visual'
+const brandRow = (enabled: boolean) => ({
+  entryId: 'include:dsh-sidebar-brand', patchId: 'dsh-sidebar-brand', moduleName: BRAND,
+  enabled, fiberPhase: enabled ? 'active' : null,
 })
+
+for (const bundleName of [BRAND, ATLAS]) {
+  test(`${bundleName}: follows the brand row through disable, re-enable and bundle removal`, async () => {
+    const disposers: (() => void)[] = []
+    const slots = new Map<string, Record<string, unknown>>()
+    const locales = new Map()
+    const otherRow = { ...brandRow(true), entryId: 'include:other', patchId: 'other', moduleName: '@miorin/other' }
+    let brand: ReturnType<typeof brandRow> | undefined = brandRow(true)
+    let listener: (() => void) | undefined
+    const ctx = {
+      remote: {
+        $on(event, callback) {
+          assert.equal(event, 'plugin-manager/changed')
+          listener = callback
+          return () => { listener = undefined }
+        },
+        pluginManager: {
+          listPlugins: async () => ({ ok: true, value: brand ? [otherRow, brand] : [otherRow] }),
+          // The bundle stays selected when just the row is disabled. Under Atlas there is no standalone bundle.
+          listBundles: async () => ({ ok: true, value: [{ name: bundleName, enabled: brand !== undefined }] }),
+        },
+      },
+      effect: (install) => disposers.push(install()),
+      locale: { register(ns, labels) { locales.set(ns, labels); return () => locales.delete(ns) } },
+      slots: {
+        inject(name, install) { assert.equal(typeof name, 'string'); return install() },
+        register(options) { slots.set(options.name, options); return () => slots.delete(options.name) },
+      },
+    }
+    const change = async (row: typeof brand) => {
+      brand = row
+      assert.ok(listener)
+      listener()
+      await Promise.resolve()
+    }
+    const counts = () => [slots.size, styles.size, locales.size]
+
+    assert.deepEqual(plugin.inject, ['slots', 'locale', 'remote', 'remote.pluginManager'])
+    plugin.apply(ctx)
+    await Promise.resolve()
+    assert.deepEqual([...slots.values()], [
+      { name: 'sidebar.brand.mark', priority: -10 },
+      { name: 'sidebar.brand.name', priority: -10 },
+      { name: 'plugins.bundle.config', key: BRAND, locale: 'dsh-sidebar-brand' },
+    ])
+    assert.equal(Object.keys(locales.get('dsh-sidebar-brand')).length, 8)
+    assert.deepEqual(counts(), [3, 1, 1])
+    await change(brandRow(false))
+    assert.deepEqual(counts(), [0, 0, 0])
+    await change(brandRow(true))
+    assert.deepEqual(counts(), [3, 1, 1])
+    await change(undefined)
+    assert.deepEqual(counts(), [0, 0, 0])
+    const pending = change(brandRow(true))
+    for (const dispose of disposers.reverse()) dispose()
+    await pending
+    assert.deepEqual(counts(), [0, 0, 0])
+    assert.equal(listener, undefined)
+  })
+}
 
 test('validates type, size and browser decoding before replacing an existing image', async () => {
   const svg = new Blob(['<svg/>'], { type: 'image/svg+xml' })

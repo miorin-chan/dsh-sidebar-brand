@@ -4,12 +4,18 @@ import { byLabel, bySel, byText, open } from '../../../tools/dsh-web-drive/lib/p
 
 const url = process.env.SIDEBAR_BRAND_TEST_URL
 assert.ok(url, 'Set SIDEBAR_BRAND_TEST_URL to the disposable Web profile URL')
+const mode = process.argv[2] ?? 'standalone'
+assert.ok(mode === 'standalone' || mode === 'atlas', 'Expected standalone or atlas')
+const bundle = mode === 'atlas' ? 'dsh-atlas-visual' : 'dsh-sidebar-brand'
+const title = mode === 'atlas' ? 'Visual Modular Improvement Plan' : 'Sidebar brand'
 const page = await open(url, { viewport: { width: 1440, height: 900 } })
 const toggle = '[data-sidebar-toggle]'
 const expanded = '[data-slot="sidebar.brand.name"]'
 const mark = '[data-slot="sidebar.brand.mark"]'
 const input = '[data-dsh-brand-settings] input[type=file]'
-const brandSwitch = '[data-plugin-detail="@miorin/dsh-sidebar-brand"] [role=switch][aria-label="Enable Sidebar brand"]'
+const detail = `[data-plugin-detail="@miorin/${bundle}"]`
+const brandSwitch = `${detail} [role=switch][aria-label="Enable component Sidebar brand"]`
+const bundleSwitch = `${detail} [role=switch][aria-label="Enable ${title}"]`
 const visible = (selector: string) => `Boolean(document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect().height)`
 const imageReady = (selector: string) => `(() => {
   const image = document.querySelector(${JSON.stringify(selector)})
@@ -30,8 +36,11 @@ const collapse = async () => {
   await page.session.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 380, y: 60 })
   await page.waitFor(`document.querySelector('${toggle}').getAttribute('aria-label') === 'Open sidebar' && !document.querySelector('${expanded}')`)
 }
-const expand = async () => {
-  await click(bySel(toggle))
+const expand = async (keyboard = false) => {
+  if (keyboard) {
+    await page.eval(`document.querySelector('${toggle}').focus()`)
+    await page.key('Enter')
+  } else await click(bySel(toggle))
   await page.waitFor(`document.querySelector('${expanded}') !== null && !document.querySelector('[data-animating="true"]')`)
 }
 const selectFixture = async (file: string) => {
@@ -46,11 +55,11 @@ const selectFixture = async (file: string) => {
 
 try {
   await page.waitFor(visible(toggle))
-  if (await page.center(byText('Continue')) !== null) await click(byText('Continue'))
-  await page.key('Escape')
+  const preview = byText('Continue', '[role="dialog"] button')
+  if (await page.waitFor(`Boolean(${preview})`, 5000).catch(() => false)) await click(preview)
+  await page.waitFor(`!document.querySelector('[role="dialog"][aria-modal="true"]')`)
   if (await page.eval(`document.querySelector('${toggle}').getAttribute('aria-label') === 'Open sidebar'`)) await expand()
   await page.waitFor(`document.querySelector('[data-dsh-brand-name="hidden"]') !== null`)
-  await page.waitFor(visible(toggle))
   assert.equal(await page.eval(`document.querySelector('${toggle}').parentElement.getBoundingClientRect().height`), 28)
   assert.equal(await page.eval(`document.querySelector('${expanded}').closest('button').getClientRects().length`), 0)
   assert.ok(await page.center(byLabel('New session')))
@@ -62,10 +71,12 @@ try {
 
   const pluginsButton = byLabel('Plugins', 'button[aria-label="Plugins"]')
   await click(pluginsButton)
-  await page.waitFor(`(${byLabel('View Sidebar brand')}) !== null`)
-  await click(byLabel('View Sidebar brand'))
+  await page.waitFor(`(${byLabel(`View ${title}`)}) !== null`)
+  await click(byLabel(`View ${title}`))
   await page.waitFor(visible(input))
-  await page.waitFor(`/Choose a local image below/.test(document.querySelector('[data-plugin-detail] [data-detail-document]')?.innerText ?? '')`)
+  if (mode === 'standalone') {
+    await page.waitFor(`/Choose a local image below/.test(document.querySelector('[data-plugin-detail] [data-detail-document]')?.innerText ?? '')`)
+  }
   await selectFixture('./fixtures/brand.svg')
   await page.waitFor(imageReady('img[data-dsh-brand-name]'))
   assert.deepEqual(await page.eval(`(() => { const rect = document.querySelector('img[data-dsh-brand-name]').getBoundingClientRect(); return [rect.width, rect.height] })()`), [108, 24])
@@ -79,11 +90,12 @@ try {
   assert.equal(await page.eval(visible(`${toggle} > svg`)), false, 'the image occupies the resting rail toggle')
   await page.hover(bySel(toggle))
   await page.waitFor(visible(`${toggle} > svg`))
-  await expand()
+  await expand(true)
   console.log('PASS file selection: wide image replaces logo and text, rail fits same image and retains hover affordance, invalid image preserves choice')
 
   await click(bySel(brandSwitch))
-  await page.waitFor(`document.querySelector('${brandSwitch}').getAttribute('aria-checked') === 'false' && !document.querySelector('[data-dsh-brand-name]')`)
+  await page.waitFor(`document.querySelector('${brandSwitch}')?.getAttribute('aria-checked') === 'false' && !document.querySelector('[data-dsh-brand-name]')`)
+  assert.equal(await page.eval(`document.querySelector('${bundleSwitch}')?.getAttribute('aria-checked')`), 'true')
   await page.waitFor(visible(`${expanded} > *`))
   assert.ok(await page.eval(visible(`${mark} svg`)), 'original expanded mark returns')
   await collapse()
