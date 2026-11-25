@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import * as React from 'react'
+import * as runtime from 'react/jsx-runtime'
 import { chooseImage, imagePreference } from '../src/client/image.ts'
 
 let registration
@@ -12,9 +13,29 @@ globalThis.document = {
 globalThis.window = { __ModuleLoader__: { load(entry) { registration = entry } } }
 await import('../client.js')
 assert.equal(registration.id, '@miorin/dsh-sidebar-brand')
+
+const fakePrimitives = {
+  Button({ variant, size, icon, className, children, ...rest }) {
+    return React.createElement(
+      'button',
+      { type: 'button', 'data-variant': variant, 'data-size': size, className, ...rest },
+      icon ?? null,
+      children,
+    )
+  },
+  StateDot({ state, size, className }) {
+    return React.createElement('span', { 'data-state-dot': state, 'data-size': size ?? '', className, 'aria-hidden': 'true' })
+  },
+  IconPersonalizationOutlineMedium: (props) => React.createElement('svg', { 'data-icon': 'personalization', ...props }),
+  IconUploadOutlineMedium: (props) => React.createElement('svg', { 'data-icon': 'upload', ...props }),
+  IconTrashOutlineRegular: (props) => React.createElement('svg', { 'data-icon': 'trash', ...props }),
+}
+
 const plugin = registration.factory((name) => {
-  assert.equal(name, 'react')
-  return React
+  if (name === 'react') return React
+  if (name === 'react/jsx-runtime') return runtime
+  if (name === '@deepseek-ai/dsh-client-ui-primitives') return fakePrimitives
+  throw new Error(`Unexpected module request: ${name}`)
 })
 
 const BRAND = '@miorin/dsh-sidebar-brand'
@@ -23,6 +44,23 @@ const brandRow = (enabled: boolean) => ({
   entryId: 'include:dsh-sidebar-brand', patchId: 'dsh-sidebar-brand', moduleName: BRAND,
   enabled, fiberPhase: enabled ? 'active' : null,
 })
+
+function findElements(node: unknown, predicate: (el: React.ReactElement) => boolean): React.ReactElement[] {
+  const found: React.ReactElement[] = []
+  const visit = (item: unknown): void => {
+    if (Array.isArray(item)) {
+      for (const child of item) visit(child)
+      return
+    }
+    if (!React.isValidElement(item)) return
+    if (predicate(item)) found.push(item)
+    const props = item.props as { children?: unknown; icon?: unknown }
+    if (props.icon !== undefined) visit(props.icon)
+    if (props.children !== undefined) visit(props.children)
+  }
+  visit(node)
+  return found
+}
 
 for (const bundleName of [BRAND, ATLAS]) {
   test(`${bundleName}: follows the brand row through disable, re-enable and bundle removal`, async () => {
@@ -83,6 +121,76 @@ for (const bundleName of [BRAND, ATLAS]) {
     assert.equal(listener, undefined)
   })
 }
+
+test('settings page renders card layout, native primitives, preview, and clear action', () => {
+  const storage = new Map<string, string>()
+  const prevWindow = globalThis.window
+  const stubReact = {
+    ...React,
+    useRef: (initial: unknown) => ({ current: initial }),
+    useState: (initial: unknown) => [initial, () => {}],
+    useSyncExternalStore: (_sub: unknown, getSnapshot: () => unknown) => getSnapshot(),
+  }
+  const stubPlugin = registration.factory((name) => {
+    if (name === 'react') return stubReact
+    if (name === 'react/jsx-runtime') return runtime
+    if (name === '@deepseek-ai/dsh-client-ui-primitives') return fakePrimitives
+    throw new Error(`Unexpected module request: ${name}`)
+  })
+  const registered: { render?: (props: unknown) => React.ReactNode } = {}
+  const disposers: (() => void)[] = []
+  globalThis.window = {
+    localStorage: {
+      getItem: (k: string) => storage.get(k) ?? null,
+      setItem: (k: string, v: string) => { storage.set(k, v) },
+      removeItem: (k: string) => { storage.delete(k) },
+    },
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  } as unknown as Window & typeof globalThis
+  try {
+    stubPlugin.apply({
+      remote: {
+        $on: () => () => {},
+        pluginManager: { listPlugins: async () => ({ ok: true, value: [] }) },
+      },
+      effect: (install: () => () => void) => disposers.push(install()),
+      locale: { register: () => () => {} },
+      slots: {
+        inject: (_name: string, install: () => () => void) => install(),
+        register(options: { name: string }, component: (props: unknown) => React.ReactNode) {
+          if (options.name === 'plugins.bundle.config') registered.render = component
+          return () => {}
+        },
+      },
+    })
+    assert.ok(registered.render)
+    assert.equal(registered.render({ view: 'summary', t: String }), null)
+
+    const emptyTree = registered.render({ view: 'page', t: String }) as React.ReactElement
+    const emptyEl = (emptyTree.type as (props: unknown) => React.ReactElement)(emptyTree.props)
+    assert.equal((emptyEl.props as Record<string, unknown>)['data-dsh-brand-settings'], '')
+    const styleEl = findElements(emptyEl, el => el.type === 'style')[0]
+    const cssText = String((styleEl.props as { children?: unknown }).children ?? '')
+    assert.match(cssText, /@media \(hover: hover\)/)
+    assert.match(cssText, /--dsw-focus-ring-color/)
+    assert.match(cssText, /@container \(max-width: 440px\)/)
+    assert.match(cssText, /\[data-dsh-aggregate-member\]/)
+    assert.equal(findElements(emptyEl, el => el.type === 'input' && (el.props as { type?: string }).type === 'file').length, 1)
+    assert.equal(findElements(emptyEl, el => el.type === fakePrimitives.Button).length, 0)
+
+    storage.set('dsh.sidebar-brand.image', 'data:image/png;base64,YQ==')
+    const filledTree = registered.render({ view: 'page', t: String }) as React.ReactElement
+    const filledEl = (filledTree.type as (props: unknown) => React.ReactElement)(filledTree.props)
+    assert.equal(findElements(filledEl, el => el.type === 'img').length, 1)
+    const buttons = findElements(filledEl, el => el.type === fakePrimitives.Button)
+    assert.equal(buttons.length, 1)
+    assert.equal((buttons[0].props as { className?: string }).className, 'dsh-sb-danger')
+    for (const dispose of disposers.reverse()) dispose()
+  } finally {
+    globalThis.window = prevWindow
+  }
+})
 
 test('validates type, size and browser decoding before replacing an existing image', async () => {
   const svg = new Blob(['<svg/>'], { type: 'image/svg+xml' })

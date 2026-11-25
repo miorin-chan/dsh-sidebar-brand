@@ -6,9 +6,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { createElement as h, useRef, useState, useSyncExternalStore } from 'react'
+import { createElement as h, useSyncExternalStore } from 'react'
+import { ImageSettings, type Preference } from './brand-settings.js'
+import { imagePreference } from './image.js'
 import { LABELS, NS } from './labels.js'
-import { ACCEPT, chooseImage, imagePreference } from './image.js'
 
 const MARK = 'sidebar.brand.mark'
 const NAME = 'sidebar.brand.name'
@@ -36,52 +37,6 @@ const STYLES = `
     padding-block: 0;
   }
 `
-
-type Preference = ReturnType<typeof imagePreference>
-
-function ImageSettings({ preference, t }: { preference: Preference } & PropsLocale<typeof NS>) {
-  const image = useSyncExternalStore(preference.subscribe, preference.read)
-  const picker = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<'invalid' | 'saveError' | null>(null)
-  return h('section', { 'data-dsh-brand-settings': '', style: { display: 'grid', justifyItems: 'start', gap: 8 } },
-    h('label', null, t('image'), ' ', h('input', {
-      ref: picker, type: 'file', accept: ACCEPT, disabled: busy,
-      style: { maxInlineSize: '100%', color: 'inherit', font: 'inherit' },
-      onChange: async (event) => {
-        const file = event.currentTarget.files?.[0]
-        event.currentTarget.value = ''
-        if (!file) return
-        setBusy(true)
-        setError(null)
-        try {
-          const selected = await chooseImage(file, async (src) => {
-            const candidate = new Image()
-            candidate.src = src
-            await candidate.decode()
-          })
-          setError(selected === null ? 'invalid' : preference.write(selected) ? null : 'saveError')
-        } finally {
-          setBusy(false)
-        }
-      },
-    })),
-    h('span', { style: { color: 'var(--dsw-alias-label-secondary)' } }, t('hint')),
-    image && h('div', { style: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' } },
-      h('img', { src: image, alt: t('image'), style: { height: 24, maxWidth: 'min(160px, 100%)', objectFit: 'contain' } }),
-      h('button', {
-        type: 'button', disabled: busy,
-        style: { font: 'inherit', color: 'inherit' },
-        onClick: () => {
-          if (!preference.write(null)) { setError('saveError'); return }
-          setError(null)
-          picker.current?.focus()
-        },
-      }, t('clear')),
-    ),
-    error && h('span', { role: 'alert' }, t(error)),
-  )
-}
 
 const BUNDLE = `@miorin/${NS}`
 
