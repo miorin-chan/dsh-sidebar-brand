@@ -1,0 +1,5 @@
+# Activates the bundle. The Host half is inert; the Client half ships through
+# package.json `dsh.client` and carries Sidebar brand.
+- insert:
+    - id: dsh-sidebar-brand
+      name: '@miorin/dsh-sidebar-brand'

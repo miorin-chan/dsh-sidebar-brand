@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Marque de la barre latérale",
+    "description": "Remplace ou masque la marque sans supprimer le bouton de la barre latérale.",
+    "detail": "docs/DETAIL.fr.md"
+  }
+}

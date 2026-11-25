@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Sidebar brand",
+    "description": "Replaces or hides the sidebar brand while preserving the sidebar toggle.",
+    "detail": "docs/DETAIL.en.md"
+  }
+}

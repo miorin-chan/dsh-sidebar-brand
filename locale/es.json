@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Marca de la barra lateral",
+    "description": "Sustituye u oculta la marca sin quitar el control de la barra lateral.",
+    "detail": "docs/DETAIL.es.md"
+  }
+}
