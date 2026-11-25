@@ -1,7 +1,6 @@
 {
   "name": "@miorin/dsh-sidebar-brand",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "description": "Replaces or hides the sidebar brand while preserving the sidebar toggle.",
   "type": "module",
@@ -71,5 +70,17 @@
     "esbuild": "0.28.2",
     "react": "18.3.1",
     "typescript": "5.7.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miorin-chan/dsh-sidebar-brand.git"
+  },
+  "homepage": "https://github.com/miorin-chan/dsh-sidebar-brand#readme",
+  "bugs": {
+    "url": "https://github.com/miorin-chan/dsh-sidebar-brand/issues"
   }
 }
