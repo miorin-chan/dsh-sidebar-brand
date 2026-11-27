@@ -1,5 +1,7 @@
 # 开发与验证
 
+- [产品设计](../DESIGN.md)：问题定位、目标体验、边界与成功标准。
+
 插件通过 `sidebar.brand.mark` 和 `sidebar.brand.name` 两个单值插槽接管品牌显示，
 在 `plugins.bundle.config` 提供本地选图入口。
 插件只注册自己的插槽与样式。
