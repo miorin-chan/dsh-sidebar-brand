@@ -53,6 +53,10 @@ function findElements(node: unknown, predicate: (el: React.ReactElement) => bool
       return
     }
     if (!React.isValidElement(item)) return
+    if (typeof item.type === 'function' && ['KnobsPanel', 'KnobRow', 'KnobItem'].includes(item.type.name)) {
+      visit((item.type as (props: Record<string, unknown>) => unknown)(item.props as Record<string, unknown>))
+      return
+    }
     if (predicate(item)) found.push(item)
     const props = item.props as { children?: unknown; icon?: unknown }
     if (props.icon !== undefined) visit(props.icon)
@@ -168,7 +172,8 @@ test('settings page renders card layout, native primitives, preview, and clear a
     assert.equal(registered.render({ view: 'summary', t: String }), null)
 
     const emptyTree = registered.render({ view: 'page', t: String }) as React.ReactElement
-    const emptyEl = (emptyTree.type as (props: unknown) => React.ReactElement)(emptyTree.props)
+    const rawEmpty = (emptyTree.type as (props: unknown) => React.ReactElement)(emptyTree.props)
+    const emptyEl = (rawEmpty.type as (props: unknown) => React.ReactElement)(rawEmpty.props)
     assert.equal((emptyEl.props as Record<string, unknown>)['data-dsh-brand-settings'], '')
     const styleEl = findElements(emptyEl, el => el.type === 'style')[0]
     const cssText = String((styleEl.props as { children?: unknown }).children ?? '')
@@ -177,15 +182,15 @@ test('settings page renders card layout, native primitives, preview, and clear a
     assert.match(cssText, /@container \(max-width: 440px\)/)
     assert.match(cssText, /\[data-dsh-aggregate-member\]/)
     assert.equal(findElements(emptyEl, el => el.type === 'input' && (el.props as { type?: string }).type === 'file').length, 1)
-    assert.equal(findElements(emptyEl, el => el.type === fakePrimitives.Button).length, 0)
+    assert.equal(findElements(emptyEl, el => el.type === fakePrimitives.Button).length, 1)
 
     storage.set('dsh.sidebar-brand.image', 'data:image/png;base64,YQ==')
     const filledTree = registered.render({ view: 'page', t: String }) as React.ReactElement
     const filledEl = (filledTree.type as (props: unknown) => React.ReactElement)(filledTree.props)
     assert.equal(findElements(filledEl, el => el.type === 'img').length, 1)
     const buttons = findElements(filledEl, el => el.type === fakePrimitives.Button)
-    assert.equal(buttons.length, 1)
-    assert.equal((buttons[0].props as { className?: string }).className, 'dsh-sb-danger')
+    assert.equal(buttons.length, 2)
+    assert.equal((buttons[1].props as { className?: string }).className, 'knobs-danger')
     for (const dispose of disposers.reverse()) dispose()
   } finally {
     globalThis.window = prevWindow

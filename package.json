@@ -69,6 +69,7 @@
     "@deepseek-ai/dsh-client-ui-sidebar": "0.2.2-rc.5",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.2-rc.5",
     "@deepseek-ai/dsh-plugin-manager": "0.2.2-rc.5",
+    "@miorin/dsh-plugin-knobs-ui": "0.1.0",
     "@types/node": "22.20.5",
     "@types/react": "18.3.31",
     "esbuild": "0.28.2",
