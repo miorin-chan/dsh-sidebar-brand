@@ -26,6 +26,8 @@
     "AGENTS.local.md",
     "docs/README.md",
     "docs/DETAIL.*.md",
+    "docs/assets/screenshots/main-light.png",
+    "docs/assets/screenshots/main-dark.png",
     "README.zh.md"
   ],
   "engines": {

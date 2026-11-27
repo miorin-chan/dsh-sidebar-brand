@@ -13,3 +13,11 @@
 图片保存在当前浏览器对应的 DSH 地址下，重新启用插件时可以继续使用。
 
 [开发与验证](docs/README.md)
+
+## 实拍截图
+
+展开的侧栏显示上传的演示标识，原生侧栏按钮仍可见。
+
+![展开的侧栏在原生侧栏按钮旁显示自定义 Atlas 标识](docs/assets/screenshots/main-light.png)
+
+[深色主题](docs/assets/screenshots/main-dark.png)

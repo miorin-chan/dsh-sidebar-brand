@@ -16,3 +16,11 @@ Disabling the plugin restores the stock brand.
 The image is stored in this browser for this DSH address, so it is still available when the plugin is re-enabled.
 
 [Development and verification](docs/README.md)
+
+## Screenshots
+
+An uploaded demo logo replaces the brand in the expanded sidebar, with the native toggle still visible.
+
+![Custom Atlas brand next to the native sidebar toggle](docs/assets/screenshots/main-light.png)
+
+[Dark theme](docs/assets/screenshots/main-dark.png)
